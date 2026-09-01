@@ -25,6 +25,9 @@ from vllm.model_executor.kernels.linear.scaled_mm.cutlass import (
 from vllm.model_executor.kernels.linear.scaled_mm.flashinfer import (
     FlashInferFP8ScaledMMLinearKernel,
 )
+from vllm.model_executor.kernels.linear.scaled_mm.rocm import (
+    ROCmFP8ScaledMMLinearKernel,
+)
 from vllm.model_executor.kernels.linear.scaled_mm.ScaledMMLinearKernel import (
     FP8ScaledMMLinearLayerConfig,
     Int8ScaledMMLinearKernel,
@@ -36,6 +39,7 @@ from vllm.model_executor.layers.fusion.quant_activation import (
     expose_input_quant_key,
 )
 from vllm.model_executor.layers.quantization.utils.quant_utils import (
+    kFp8DynamicTensorSym,
     kFp8StaticTensorSym,
     kNvfp4Dynamic,
 )
@@ -46,6 +50,7 @@ SUPPORTING = {
     CutlassFP8ScaledMMLinearKernel,
     FlashInferFP8ScaledMMLinearKernel,
     FlashInferCutlassNvFp4LinearKernel,
+    ROCmFP8ScaledMMLinearKernel,
 }
 
 
@@ -94,6 +99,13 @@ def _resolved_apply_weights(cls: type):
 def test_only_known_backends_support_prequantized_input():
     declarers = {c for c in _all_kernel_classes() if _probe(c).input_quant_key()}
     assert declarers == SUPPORTING
+
+
+def test_rocm_scaled_mm_accepts_dynamic_tensor_input():
+    kernel = _probe(ROCmFP8ScaledMMLinearKernel)
+    kernel.config.activation_quant_key = kFp8DynamicTensorSym
+
+    assert kernel.input_quant_key() == kFp8DynamicTensorSym
 
 
 def test_supporting_backend_declares_consume_via_helper():

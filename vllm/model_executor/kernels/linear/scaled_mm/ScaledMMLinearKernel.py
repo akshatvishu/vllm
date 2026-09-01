@@ -80,9 +80,9 @@ class ScaledMMLinearKernel(Generic[_ConfigT, _ParamsT], ABC):
 
         Manual fusion uses this to decide whether to hoist activation
         quantization out of apply_weights into an upstream fused kernel.
-        Return None when the kernel needs in-kernel quantization (custom
-        padding or swizzling, dynamic scales, etc.). Kernels that return a
-        key must consume the activation via as_quantized_activation.
+        Return None when the producer cannot satisfy a kernel's input layout,
+        padding, or scale contract. Kernels that return a key must consume the
+        activation via as_quantized_activation.
         """
         return None
 

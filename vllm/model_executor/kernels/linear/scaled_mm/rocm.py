@@ -6,6 +6,7 @@ import torch
 
 import vllm.envs as envs
 from vllm import _custom_ops as ops
+from vllm.model_executor.layers.quantization.utils.quant_utils import QuantKey
 from vllm.platforms import current_platform
 from vllm.utils.platform_utils import num_compute_units
 from vllm.utils.torch_utils import direct_register_custom_op
@@ -105,6 +106,9 @@ class ROCmFP8ScaledMMLinearKernel(FP8ScaledMMLinearKernel):
             return False, "requires per tensor activation and weight scales."
 
         return True, None
+
+    def input_quant_key(self) -> QuantKey:
+        return self.config.activation_quant_key
 
     def apply_scaled_mm(
         self,

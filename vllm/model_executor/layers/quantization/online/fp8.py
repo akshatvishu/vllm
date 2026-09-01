@@ -26,6 +26,10 @@ from vllm.model_executor.layers.fused_moe import RoutedExperts
 from vllm.model_executor.layers.fused_moe.oracle.fp8 import (
     select_fp8_moe_backend,
 )
+from vllm.model_executor.layers.fusion.quant_activation import (
+    QuantizedActivation,
+    expose_input_quant_key,
+)
 from vllm.model_executor.layers.linear import (
     LinearMethodBase,
 )
@@ -201,6 +205,8 @@ class Fp8PerTensorOnlineLinearMethod(_Fp8OnlineLinearBase):
             out_dtype=self.out_dtype,
             module_name=self.__class__.__name__,
         )
+        if not envs.VLLM_BATCH_INVARIANT:
+            expose_input_quant_key(layer, self.fp8_linear)
         self.use_marlin = isinstance(self.fp8_linear, MarlinFP8ScaledMMLinearKernel)
 
     def process_weights_after_loading(self, layer: Module) -> None:
@@ -227,11 +233,12 @@ class Fp8PerTensorOnlineLinearMethod(_Fp8OnlineLinearBase):
     def apply(
         self,
         layer: torch.nn.Module,
-        x: torch.Tensor,
+        x: torch.Tensor | QuantizedActivation,
         bias: torch.Tensor | None = None,
     ) -> torch.Tensor:
         # if batch invariant mode is enabled, use BF16 dequant
         if envs.VLLM_BATCH_INVARIANT:
+            assert isinstance(x, torch.Tensor)
             if isinstance(self.fp8_linear, CutlassFP8ScaledMMLinearKernel):
                 return self.fp8_linear.apply_weights(layer, x, bias)
 
